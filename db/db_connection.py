@@ -1,7 +1,4 @@
-#!/usr/bin/env python3
-"""
-postgres_healthcheck.py  –  tiny helpers to open/close a PostgreSQL session
-"""
+
 import os
 import sys
 import psycopg2
