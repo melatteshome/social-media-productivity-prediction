@@ -46,7 +46,6 @@ def create_table(conn,
     if not columns:
         raise ValueError("columns mapping must define at least one column.")
 
-    # Build:  CREATE TABLE [IF NOT EXISTS] <table> ( col1 DDL, col2 DDL, … );
     ddl = sql.SQL("CREATE TABLE {ine} {tbl} ( {cols} )").format(
         ine=sql.SQL("IF NOT EXISTS") if if_not_exists else sql.SQL(""),
         tbl=sql.Identifier(table_name),
@@ -58,5 +57,5 @@ def create_table(conn,
 
     with conn.cursor() as cur:
         cur.execute(ddl)
-    print(f"📦 Table '{table_name}' created (IF NOT EXISTS = {if_not_exists}).")
+    print(f"Table '{table_name}' created (IF NOT EXISTS = {if_not_exists}).")
 
