@@ -1,40 +1,55 @@
 #!/usr/bin/env python3
 """
-Simple helpers for opening a PostgreSQL connection.
-
-Reads DATABASE_URL from .env or the shell.
-Works with both psycopg2 and (optionally) SQLAlchemy.
+postgres_healthcheck.py  –  tiny helpers to open/close a PostgreSQL session
 """
-
 import os
-from contextlib import contextmanager
-from dotenv import load_dotenv          
-import psycopg2                         
+import sys
+import psycopg2
+from dotenv import load_dotenv
 
-load_dotenv()                           
 
-# Fallback URL has the same shape you showed earlier
-DATABASE_URL = os.getenv("DB_URL",)
-
-# ── 2. psycopg2 connection helper ───────────────────────────────────────────
-@contextmanager
-def pg_connection():
+def connect_db():
     """
-    Yields a psycopg2 connection inside a context-manager.
+    Open a PostgreSQL connection using the DATABASE_URL env-var.
 
-    Usage:
-        with pg_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT now();")
-                print(cur.fetchone())
+    Returns
+    -------
+    psycopg2.extensions.connection
+        An open connection object on success.
+    None
+        If the environment variable is missing or the handshake fails.
     """
-    conn = psycopg2.connect(DATABASE_URL)
+    load_dotenv()  # inject variables from the local .env file  # :contentReference[oaicite:0]{index=0}
+    db_url = os.getenv("DB_URL")
+
+    if not db_url:
+        print("❌ DATABASE_URL not found – create a .env file first.")
+        return None
+
     try:
-        yield conn                 # commits automatically on normal exit
-        conn.commit()
-        print('connected')
-    except Exception:              # rolls back on error
-        conn.rollback()
-        raise
+        conn = psycopg2.connect(dsn=db_url)   # :contentReference[oaicite:1]{index=1}
+        conn.autocommit = True                # optional: skip implicit txns
+        print("✅ Connected to Postgres!")
+        return conn
+    except psycopg2.Error as err:
+        print(f"❌ Could not connect: {err}")
+        return None
+
+
+def close_db(conn):
+    """
+    Close an existing psycopg2 connection if it is still open.
+    """
+    if conn and not conn.closed:              # status 0 == OK / open  :contentReference[oaicite:2]{index=2}
+        conn.close()
+        print("🔒 Connection closed.")
+
+
+# --------------------------------------------------------------------------- #
+if __name__ == "__main__":
+    connection = connect_db()                # open session
+    try:
+        # Do whatever quick health-check or queries you need here
+        pass
     finally:
-        conn.close()               # always close – even if exceptions occur
+        close_db(connection)                 # clean shutdown  :contentReference[oaicite:3]{index=3}
