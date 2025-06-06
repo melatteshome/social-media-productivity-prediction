@@ -1,6 +1,8 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import numpy as np
+from typing import Callable   
 
 def plot_categorical_univariate(
     data: pd.DataFrame | pd.Series,
@@ -112,10 +114,6 @@ def plot_categorical_univariate(
     sns.despine(ax=ax)
     return ax
 
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 
 def plot_bivariate(
@@ -127,55 +125,18 @@ def plot_bivariate(
     ax: plt.Axes | None = None,
     palette: str | list[str] = "Set2",
     bins: int = 30,
-    aggfunc: str | callable = "mean",
-    heatmap_stat: str = "count",           # "count", "mean", or "sum"
+    aggfunc: str | Callable = "mean",   # ← built-in replaced
+    heatmap_stat: str = "count",
     annot: bool = True,
     title: str | None = None,
     **kwargs,
 ) -> plt.Axes:
-    """
-    Quick bivariate plot between two columns, picking a sensible default.
-
-    Parameters
-    ----------
-    data : pd.DataFrame
-        Source dataframe.
-    x, y : str
-        Columns to compare.
-    kind : str, optional
-        Force a plot type:
-          * numeric–numeric ...... 'scatter', 'reg', 'hex', 'hist2d'
-          * numeric–categorical .. 'box', 'violin', 'bar'
-          * categorical–categorical 'heatmap'
-        If None (default) the function decides based on dtypes.
-    ax : matplotlib Axes, optional
-        Supply to draw on an existing subplot.
-    palette : str | list, default "Set2"
-        Colour palette for box/violin/bar plots.
-    bins : int, default 30
-        Number of bins for 'hist2d'.
-    aggfunc : str | callable, default "mean"
-        Aggregator for 'bar' plots (e.g., "sum" or np.median).
-    heatmap_stat : {"count","mean","sum"}, default "count"
-        Statistic to display when both variables are categorical.
-    annot : bool, default True
-        Show values inside heat-map cells.
-    title : str, optional
-        Custom figure title.
-    **kwargs
-        Passed straight to the underlying seaborn/matplotlib call.
-
-    Returns
-    -------
-    matplotlib Axes
-    """
-    # --- helpers -------------------------------------------------------
+  
     def _is_num(series):
         return pd.api.types.is_numeric_dtype(series)
 
     x_is_num, y_is_num = _is_num(data[x]), _is_num(data[y])
 
-    # Choose default plot type
     if kind is None:
         if x_is_num and y_is_num:
             kind = "scatter"
@@ -234,123 +195,4 @@ def plot_bivariate(
     return ax
 
 
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-
-def plot_bivariate(
-    data: pd.DataFrame,
-    x: str,
-    y: str,
-    *,
-    kind: str | None = None,
-    ax: plt.Axes | None = None,
-    palette: str | list[str] = "Set2",
-    bins: int = 30,
-    aggfunc: str | callable = "mean",
-    heatmap_stat: str = "count",           # "count", "mean", or "sum"
-    annot: bool = True,
-    title: str | None = None,
-    **kwargs,
-) -> plt.Axes:
-    """
-    Quick bivariate plot between two columns, picking a sensible default.
-
-    Parameters
-    ----------
-    data : pd.DataFrame
-        Source dataframe.
-    x, y : str
-        Columns to compare.
-    kind : str, optional
-        Force a plot type:
-          * numeric–numeric ...... 'scatter', 'reg', 'hex', 'hist2d'
-          * numeric–categorical .. 'box', 'violin', 'bar'
-          * categorical–categorical 'heatmap'
-        If None (default) the function decides based on dtypes.
-    ax : matplotlib Axes, optional
-        Supply to draw on an existing subplot.
-    palette : str | list, default "Set2"
-        Colour palette for box/violin/bar plots.
-    bins : int, default 30
-        Number of bins for 'hist2d'.
-    aggfunc : str | callable, default "mean"
-        Aggregator for 'bar' plots (e.g., "sum" or np.median).
-    heatmap_stat : {"count","mean","sum"}, default "count"
-        Statistic to display when both variables are categorical.
-    annot : bool, default True
-        Show values inside heat-map cells.
-    title : str, optional
-        Custom figure title.
-    **kwargs
-        Passed straight to the underlying seaborn/matplotlib call.
-
-    Returns
-    -------
-    matplotlib Axes
-    """
-    # --- helpers -------------------------------------------------------
-    def _is_num(series):
-        return pd.api.types.is_numeric_dtype(series)
-
-    x_is_num, y_is_num = _is_num(data[x]), _is_num(data[y])
-
-    # Choose default plot type
-    if kind is None:
-        if x_is_num and y_is_num:
-            kind = "scatter"
-        elif x_is_num != y_is_num:        # one numeric, one categorical
-            kind = "box"
-        else:                             # both categorical
-            kind = "heatmap"
-
-    # Prepare axes
-    if ax is None:
-        _, ax = plt.subplots(figsize=(7, 4))
-
-    # --- numeric–numeric ----------------------------------------------
-    if kind in {"scatter", "reg", "hex", "hist2d"}:
-        if kind == "scatter":
-            sns.scatterplot(data=data, x=x, y=y, ax=ax, **kwargs)
-        elif kind == "reg":
-            sns.regplot(data=data, x=x, y=y, ax=ax, scatter=True,
-                        line_kws={"linewidth": 2}, **kwargs)
-        elif kind == "hex":
-            ax.hexbin(data[x], data[y], gridsize=30, cmap="Blues", **kwargs)
-        else:  # 'hist2d'
-            ax.hist2d(data[x], data[y], bins=bins, cmap="Blues", **kwargs)
-
-    # --- numeric–categorical ------------------------------------------
-    elif kind in {"box", "violin", "bar"}:
-        plotter = dict(box=sns.boxplot,
-                       violin=sns.violinplot,
-                       bar=sns.barplot)[kind]
-        plotter(data=data, x=x, y=y, palette=palette,
-                estimator=None if kind != "bar" else getattr(np, aggfunc),
-                ax=ax, **kwargs)
-
-    # --- categorical–categorical --------------------------------------
-    elif kind == "heatmap":
-        if heatmap_stat == "count":
-            pivot = pd.crosstab(data[y], data[x])
-        else:
-            values = data[y] if heatmap_stat == "sum" else data[y].astype(float)
-            pivot = pd.pivot_table(data, index=y, columns=x,
-                                   values=y, aggfunc=heatmap_stat)
-        sns.heatmap(pivot, annot=annot, fmt=".0f", cmap="Blues", ax=ax,
-                    cbar_kws={"label": heatmap_stat.capitalize()})
-
-    else:
-        raise ValueError(f"Unknown kind='{kind}'")
-
-    # --- cosmetics -----------------------------------------------------
-    ax.set_title(title or f"{kind.capitalize()} plot: {x} vs {y}")
-    ax.tick_params(axis="x", rotation=45)
-    for lbl in ax.get_xticklabels():
-        lbl.set_ha("right")
-
-    sns.despine(ax=ax)
-    plt.tight_layout()
-    return ax
+   
