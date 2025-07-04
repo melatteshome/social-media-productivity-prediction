@@ -117,26 +117,7 @@ def standardise_datetime(
 
 
 def show_outliers(series: pd.Series, *, title: str = None, return_mask: bool = False , summarize= False):
-    """
-    Visual check + detection of outliers in a numeric Pandas Series.
-    
-    Parameters
-    ----------
-    series : pd.Series
-        One column from a DataFrame (numeric).
-    title : str, optional
-        Custom title for the plot.
-    return_mask : bool, default False
-        If True, return a Boolean mask instead of the outlier values.
-    
-    Returns
-    -------
-    pd.Series or pd.Index or pd.Series[bool]
-        • When `return_mask=False` (default): the outlier values  
-          (empty Series if none).  
-        • When `return_mask=True`: a Boolean mask you can use to
-          filter the original DataFrame (all False if none).
-    """
+
     # Drop NaNs to avoid skewing the box plot or stats
     ser = series.dropna()
     if ser.empty:
@@ -176,26 +157,7 @@ def fix_outliers(
     method: str | Mapping[str, str] = "remove",
     iqr_mult: float = 1.5,
 ) -> pd.DataFrame | pd.Series:
-    """
-    Fix outliers in selected columns.
 
-    Parameters
-    ----------
-    data : pd.DataFrame or pd.Series
-        Input data.
-    columns : iterable of str, optional
-        Columns to process.  If None (default) and `data` is a Series,
-        the single Series is processed; if None and `data` is a DataFrame,
-        all numeric columns are processed.
-    method : str or dict
-        "remove", "median", "mode", or a dict mapping column→method.
-    iqr_mult : float, default 1.5
-        Multiplier on IQR that defines the outlier fence.
-
-    Returns
-    -------
-    Same type as `data`, with outliers handled.
-    """
     # Unify to DataFrame internally
     if isinstance(data, pd.Series):
         df = data.to_frame()
