@@ -16,41 +16,7 @@ def plot_categorical_univariate(
     title: str | None = None,
     missing_label: str = "_missing_",
 ) -> plt.Axes:
-    """
-    Plot a bar chart of category frequencies (and optional percentages).
-
-    Parameters
-    ----------
-    data : pd.DataFrame | pd.Series
-        Source data. If a DataFrame is passed, `column` must be supplied.
-    column : str | None
-        Column in `data` to analyse (ignored if `data` is already a Series).
-    ax : matplotlib Axes, optional
-        Existing axes to draw on. A new figure/axes are created if None.
-    top_n : int, optional
-        If set, only the `top_n` most frequent categories are shown (others are aggregated into "Other").
-    order : list[str], optional
-        Explicit ordering of categories on the x-axis. Overrides frequency order.
-    palette : str or list
-        Seaborn / matplotlib palette name **or** explicit color list.
-    show_pct : bool, default True
-        Annotate bars with percentage labels as well as counts.
-    title : str, optional
-        Custom plot title.
-    missing_label : str, default "_missing_"
-        Label assigned to missing values (NaN/None).
-
-    Returns
-    -------
-    matplotlib Axes
-        Axes with the plotted bar chart.
-
-    Example
-    -------
-    >>> df = pd.DataFrame({"country": ["DE", "US", "US", None, "CN", "DE"]})
-    >>> plot_categorical_univariate(df, "country", top_n=3)
-    >>> plt.show()
-    """
+  
     # -------- prepare the Series --------
     ser = data if isinstance(data, pd.Series) else data[column]
     ser = ser.fillna(missing_label)

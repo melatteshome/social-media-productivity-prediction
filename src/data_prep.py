@@ -2,7 +2,10 @@ from __future__ import annotations
 from typing import Iterable, Mapping, Hashable, Literal
 
 import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 from pandas.api.types import is_numeric_dtype, is_datetime64_any_dtype
+from collections.abc import Mapping
 
 def standardize_column_names(df: pd.DataFrame, strip: bool = True,
                        lower: bool = True, replace_spaces: bool = True) -> pd.DataFrame:
@@ -16,6 +19,26 @@ def standardize_column_names(df: pd.DataFrame, strip: bool = True,
         cols = cols.str.replace(r"\s+", "_", regex=True)
     return df.rename(columns=dict(zip(df.columns, cols)), copy=False)
 
+
+
+def convert_columns_to_numeric(
+    df: pd.DataFrame,
+    columns: Iterable[str],
+    *,
+    downcast: str | None = None,
+    errors: str = "coerce",
+) -> pd.DataFrame:
+
+    # Make an explicit copy so we don't mutate the caller's DataFrame
+    df_numeric = df.copy()
+
+    for col in columns:
+        if col not in df_numeric.columns:
+            raise KeyError(f"Column '{col}' not found in DataFrame.")
+        # Convert and either coerce, ignore, or raise on errors as requested
+        df_numeric[col] = pd.to_numeric(df_numeric[col], errors=errors, downcast=downcast)
+
+    return df_numeric
 
 
 def missing_report(df: pd.DataFrame, sort_desc: bool = True) -> pd.DataFrame:
@@ -111,23 +134,81 @@ def standardise_datetime(
 
 
 
-def prepare_dataframe(
-    df: pd.DataFrame,
-    dt_columns: Iterable[Hashable] | None = None,
-    **impute_kwargs,
-) -> pd.DataFrame:
-    """
-    Convenience wrapper that:
-    1. Cleans column names
-    2. Removes exact-row duplicates
-    3. Imputes missing values
-    4. Converts dt_columns to UTC
 
-    Extra keyword args are forwarded to `impute_missing`.
-    """
-    df1 = standardize_column_names(df)
-    df2, _ = deduplicate(df1)
-    df3 = impute_missing(df2, **impute_kwargs)
-    if dt_columns:
-        df3 = standardise_datetime(df3, dt_columns, set_tz="Africa/Addis_Ababa", to_utc=True)
-    return df3
+
+def show_outliers(series: pd.Series, *, title: str = None, return_mask: bool = False , summarize= False):
+
+    # Drop NaNs to avoid skewing the box plot or stats
+    ser = series.dropna()
+    if ser.empty:
+        raise ValueError("Series is empty or only contains NaNs.")
+
+    # ── 1. Visual: box plot ─────────────────────────────────────────────
+    plt.figure(figsize=(4, 1.5))  # skinny box plot
+    plt.boxplot(ser, vert=False, widths=0.6, patch_artist=True)
+    plt.title(title or f"Box plot of '{series.name}'")
+    plt.xlabel(series.name)
+    plt.tight_layout()
+    plt.show()
+
+        # ── 2. Numeric: IQR method ──────────────────────────────────────────
+    q1, q3 = ser.quantile([0.25, 0.75])
+    iqr = q3 - q1
+    lower, upper = q1 - 1.5 * iqr, q3 + 1.5 * iqr
+    mask = (ser < lower) | (ser > upper)
+
+    if summarize:
+        count   = mask.sum()
+        share   = mask.mean()
+        print(f"> {count} outlier(s) "
+              f"= {share:.2%} of {mask.size} rows")
+
+
+    if return_mask:
+        return mask.reindex(series.index, fill_value=False)  # align with original index
+    else:
+        return ser[mask]
+    
+ 
+
+import pandas as pd
+import numpy as np
+
+def fix_outliers(
+    df: pd.DataFrame,
+    column: str,
+    method: str = "remove",
+    iqr_mult: float = 1.5,
+) -> pd.DataFrame:
+    
+    if column not in df.columns:
+        raise KeyError(f"Column '{column}' not found in DataFrame.")
+    if not pd.api.types.is_numeric_dtype(df[column]):
+        column = pd.to_numeric(column)
+        
+        # raise TypeError(f"Column '{column}' must be numeric.")
+
+    out_df = df.copy()
+
+    # IQR fences
+    q1, q3 = out_df[column].quantile([0.25, 0.75])
+    iqr = q3 - q1
+    low_fence  = q1 - iqr_mult * iqr
+    high_fence = q3 + iqr_mult * iqr
+    mask = (out_df[column] < low_fence) | (out_df[column] > high_fence)
+
+    if method.lower() == "remove":
+        out_df = out_df.loc[~mask]
+
+    elif method.lower() == "median":
+        median_val = out_df[column].median()
+        out_df.loc[mask, column] = median_val
+
+    elif method.lower() == "mode":
+        mode_val = out_df[column].mode().iloc[0]
+        out_df.loc[mask, column] = mode_val
+
+    else:
+        raise ValueError("method must be 'remove', 'median', or 'mode'")
+
+    return out_df
