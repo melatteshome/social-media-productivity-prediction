@@ -21,6 +21,26 @@ def standardize_column_names(df: pd.DataFrame, strip: bool = True,
 
 
 
+def convert_columns_to_numeric(
+    df: pd.DataFrame,
+    columns: Iterable[str],
+    *,
+    downcast: str | None = None,
+    errors: str = "coerce",
+) -> pd.DataFrame:
+
+    # Make an explicit copy so we don't mutate the caller's DataFrame
+    df_numeric = df.copy()
+
+    for col in columns:
+        if col not in df_numeric.columns:
+            raise KeyError(f"Column '{col}' not found in DataFrame.")
+        # Convert and either coerce, ignore, or raise on errors as requested
+        df_numeric[col] = pd.to_numeric(df_numeric[col], errors=errors, downcast=downcast)
+
+    return df_numeric
+
+
 def missing_report(df: pd.DataFrame, sort_desc: bool = True) -> pd.DataFrame:
 
     total = df.shape[0]
@@ -151,65 +171,44 @@ def show_outliers(series: pd.Series, *, title: str = None, return_mask: bool = F
     
  
 
+import pandas as pd
+import numpy as np
+
 def fix_outliers(
-    data: pd.DataFrame | pd.Series,
-    columns: Iterable[str] | None = None,
-    method: str | Mapping[str, str] = "remove",
+    df: pd.DataFrame,
+    column: str,
+    method: str = "remove",
     iqr_mult: float = 1.5,
-) -> pd.DataFrame | pd.Series:
+) -> pd.DataFrame:
+    
+    if column not in df.columns:
+        raise KeyError(f"Column '{column}' not found in DataFrame.")
+    if not pd.api.types.is_numeric_dtype(df[column]):
+        column = pd.to_numeric(column)
+        
+        # raise TypeError(f"Column '{column}' must be numeric.")
 
-    # Unify to DataFrame internally
-    if isinstance(data, pd.Series):
-        df = data.to_frame()
+    out_df = df.copy()
+
+    # IQR fences
+    q1, q3 = out_df[column].quantile([0.25, 0.75])
+    iqr = q3 - q1
+    low_fence  = q1 - iqr_mult * iqr
+    high_fence = q3 + iqr_mult * iqr
+    mask = (out_df[column] < low_fence) | (out_df[column] > high_fence)
+
+    if method.lower() == "remove":
+        out_df = out_df.loc[~mask]
+
+    elif method.lower() == "median":
+        median_val = out_df[column].median()
+        out_df.loc[mask, column] = median_val
+
+    elif method.lower() == "mode":
+        mode_val = out_df[column].mode().iloc[0]
+        out_df.loc[mask, column] = mode_val
+
     else:
-        df = data.copy()
+        raise ValueError("method must be 'remove', 'median', or 'mode'")
 
-    # Decide which columns we should scan
-    if columns is None:
-        columns = df.select_dtypes(include=np.number).columns
-    else:
-        # keep order & ensure they exist
-        columns = [col for col in columns if col in df.columns]
-
-    # Build per-column strategy map
-    if isinstance(method, Mapping):
-        method_map = {col: method.get(col, "remove").lower() for col in columns}
-    else:
-        method_map = {col: method.lower() for col in columns}
-
-    # Collect rows to drop if any column uses "remove"
-    drop_mask = pd.Series(False, index=df.index)
-
-    for col in columns:
-        col_method = method_map[col]
-
-        # IQR bounds
-        q1, q3 = df[col].quantile([0.25, 0.75])
-        fence_low  = q1 - iqr_mult * (q3 - q1)
-        fence_high = q3 + iqr_mult * (q3 - q1)
-        mask = (df[col] < fence_low) | (df[col] > fence_high)
-
-        # No “if not mask.any()” guard: we trust caller that outliers exist
-
-        if col_method == "remove":
-            drop_mask |= mask
-
-        elif col_method == "median":
-            df.loc[mask, col] = df[col].median()
-
-        elif col_method == "mode":
-            df.loc[mask, col] = df[col].mode().iloc[0]
-
-        else:
-            raise ValueError(
-                f"Unknown method '{col_method}' for column '{col}'. "
-                "Choose 'remove', 'median', or 'mode'."
-            )
-
-    if drop_mask.any():
-        df = df.loc[~drop_mask]
-
-    return df.squeeze()  # back to Series if that’s what came in
-
-
-
+    return out_df
