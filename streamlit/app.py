@@ -1,21 +1,32 @@
 import streamlit as st
 import pandas as pd
 import numpy as np 
+import altair as alt
 
 
+# page configuration
+st.set_page_config(
+    page_title="social media usage and productivity",
+    page_icon="🤓",
+    layout="wide",
+    initial_sidebar_state="expanded")
 
-st.write("Streamlit supports a wide range of data visualizations, including [Plotly, Altair, and Bokeh charts](https://docs.streamlit.io/develop/api-reference/charts). 📊 And with over 20 input widgets, you can easily make your data interactive!")
+alt.themes.enable("dark")
 
-all_users = ["Alice", "Bob", "Charly"]
-with st.container(border=True):
-    users = st.multiselect("Users", all_users, default=all_users)
-    rolling_average = st.toggle("Rolling average")
+# heatmap function 
+def make_heatmap(input_df, input_y, input_x, input_color, input_color_theme):
+    heatmap = alt.Chart(input_df).mark_rect().encode(
+            y=alt.Y(f'{input_y}:O', axis=alt.Axis(title="Year", titleFontSize=18, titlePadding=15, titleFontWeight=900, labelAngle=0)),
+            x=alt.X(f'{input_x}:O', axis=alt.Axis(title="", titleFontSize=18, titlePadding=15, titleFontWeight=900)),
+            color=alt.Color(f'max({input_color}):Q',
+                             legend=None,
+                             scale=alt.Scale(scheme=input_color_theme)),
+            stroke=alt.value('black'),
+            strokeWidth=alt.value(0.25),
+        ).properties(width=900
+        ).configure_axis(
+        labelFontSize=12,
+        titleFontSize=12
+        ) 
+    return heatmap
 
-np.random.seed(42)
-data = pd.DataFrame(np.random.randn(20, len(users)), columns=users)
-if rolling_average:
-    data = data.rolling(7).mean().dropna()
-
-tab1, tab2 = st.tabs(["Chart", "Dataframe"])
-tab1.line_chart(data, height=250)
-tab2.dataframe(data, height=250, use_container_width=True)
