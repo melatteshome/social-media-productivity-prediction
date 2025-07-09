@@ -161,4 +161,47 @@ def plot_bivariate(
     return ax
 
 
-   
+
+def plot_compare(
+    df: pd.DataFrame,
+    col1: str,
+    col2: str,
+    *,
+    kind: str = "line",          # "line", "bar", or "scatter"
+    figsize: tuple = (10, 6),
+    **kwargs,
+):
+
+    if col1 not in df.columns or col2 not in df.columns:
+        raise ValueError(f"Columns {col1!r} and/or {col2!r} not found in DataFrame")
+
+    fig, ax = plt.subplots(figsize=figsize)
+
+    if kind == "line":
+        ax.plot(df[col1].values, label=col1, **kwargs)
+        ax.plot(df[col2].values, label=col2, **kwargs)
+        ax.set_xlabel("Index")
+        ax.set_ylabel("Value")
+
+    elif kind == "bar":
+        idx = np.arange(len(df))
+        width = 0.4
+        ax.bar(idx - width / 2, df[col1].values, width, label=col1, **kwargs)
+        ax.bar(idx + width / 2, df[col2].values, width, label=col2, **kwargs)
+        ax.set_xticks(idx)
+        ax.set_xlabel("Index")
+        ax.set_ylabel("Value")
+
+    elif kind == "scatter":
+        ax.scatter(df[col1], df[col2], **kwargs)
+        ax.set_xlabel(col1)
+        ax.set_ylabel(col2)
+
+    else:
+        raise ValueError("kind must be 'line', 'bar', or 'scatter'")
+
+    ax.set_title(f"{col1} vs {col2}")
+    ax.legend()
+    plt.tight_layout()
+    plt.show()
+    return ax
