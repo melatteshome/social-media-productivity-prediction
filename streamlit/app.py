@@ -78,3 +78,41 @@ def format_number(num):
             return f'{num // 1000000} M'
         return f'{round(num / 1000000, 1)} M'
     return f'{num // 1000} K'
+
+
+def make_social_media_usage_over_demograpic(data: pd.DataFrame) -> None:
+    st.title("Social-media influence by demographic")
+
+    # ---  Sidebar selectors  ----------------------------------------------
+    st.sidebar.header("Filter demographics")
+    age_sel   = st.sidebar.selectbox("Age group",   sorted(data["age_group"].unique()))
+    gender_sel = st.sidebar.selectbox("Gender",      sorted(data["gender"].unique()))
+    work_sel  = st.sidebar.selectbox("Work group",  sorted(data["work_group"].unique()))
+
+    # ---  Filter the dataset  ----------------------------------------------
+    mask = (
+        (data["age_group"]  == age_sel) &
+        (data["gender"]     == gender_sel) &
+        (data["work_group"] == work_sel)
+    )
+    subset = data.loc[mask]
+
+    # ---  Inform if no data  -----------------------------------------------
+    if subset.empty:
+        st.warning("No records match this demographic slice.")
+        st.stop()
+
+    # ---  Draw chart  -------------------------------------------------------
+    chart = (
+        alt.Chart(subset)
+           .mark_bar(size=35)
+           .encode(
+               x=alt.X("social_media:N", title="Platform"),
+               y=alt.Y("affect_score:Q", title="Influence score"),
+               tooltip=["social_media", "affect_score"]
+           )
+           .properties(width="container", height=400)
+    )
+    st.altair_chart(chart, use_container_width=True)
+
+
