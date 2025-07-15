@@ -152,4 +152,4 @@ st.plotly_chart(fig_scatter, use_container_width=True)
 # repeat similarly for heatmap, box/violin and bar …
 
 
-make_heatmap(input_df=df , input_y='job_type', input_x='social_platform_preference',input_color='blues' ,input_color_theme = 'blues')
+# make_heatmap(input_df=df , input_y='job_type', input_x='social_platform_preference',input_color='blues' ,input_color_theme = 'blues')
