@@ -6,6 +6,8 @@ from psycopg2 import sql , extras
 from dotenv import load_dotenv
 import pandas as pd
 
+from io import StringIO
+from typing import List, Literal, Optional
 
 def fetch_all(conn, table_name: str):
     with conn.cursor() as cur:
@@ -62,12 +64,7 @@ def create_table(conn,
     print(f"Table '{table_name}' created")
 
 
-from io import StringIO
-from typing import List, Literal, Optional
 
-import pandas as pd
-import psycopg2
-from psycopg2 import extras
 
 
 def push_dataframe(
