@@ -7,7 +7,6 @@ import plotly.express as px
 import altair as alt
 import seaborn as sns
 import matplotlib.pyplot as plt
-from pathlib import Path
 
 def plot_social_vs_job_heatmap(df: pd.DataFrame):
 
@@ -38,13 +37,10 @@ def plot_social_vs_job_heatmap(df: pd.DataFrame):
     return fig
 
 
-# os.chdir('..')
+os.chdir('..')
 
-DATA_PATH = Path(__file__).parent / "data" / "cleaned_data.csv"
-
-data = pd.read_csv(DATA_PATH)
+data = pd.read_csv('cleaned_data.csv')
 df = pd.DataFrame(data=data)
-
 # page configuration
 st.set_page_config(
     page_title="social media usage and productivity",
