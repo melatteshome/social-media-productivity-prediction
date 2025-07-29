@@ -39,7 +39,7 @@ def plot_social_vs_job_heatmap(df: pd.DataFrame):
 
 os.chdir('..')
 
-data = pd.read_csv('cleaned_data.csv')
+data = pd.read_csv('streamlit/data/cleaned_data.csv')
 df = pd.DataFrame(data=data)
 # page configuration
 st.set_page_config(
@@ -115,12 +115,12 @@ def show_focus_vs_wellbeing_bars(
         text_auto=True,
         labels={focus_col: "Uses Focus Apps", wellbeing_col: "Digital wellbeing"},
         title="Focus‑app use vs. Digital‑wellbeing status",
-        height= 300
+      
     )
     if percent:
         fig.update_layout(barmode="stack")
         fig.update_traces(offsetgroup=0)
-        # Convert to 100 %: normalise counts within each bar
+      
         fig.update_traces(
             y=[c / counts[counts[focus_col] == x]["count"].sum()
                for x, c in zip(counts[focus_col], counts["count"])])
@@ -278,4 +278,4 @@ with colA:
 
 with colB:
     plot_social_vs_job_heatmap(df=df)
-    # plot_work_vs_social_by_job(df=df)
+    plot_work_vs_social_by_job(df=df)
