@@ -278,4 +278,4 @@ with colA:
 
 with colB:
     plot_social_vs_job_heatmap(df=df)
-    plot_work_vs_social_by_job(df=df)
+    # plot_work_vs_social_by_job(df=df)
