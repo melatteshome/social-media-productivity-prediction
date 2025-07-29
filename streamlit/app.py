@@ -4,6 +4,38 @@ import numpy as np
 import altair as alt
 import os 
 import plotly.express as px
+import altair as alt
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+def plot_social_vs_job_heatmap(df: pd.DataFrame):
+
+    #   Build a frequency table: rows = job types, cols = social platforms
+    ctab = pd.crosstab(
+        df["job_type"],
+        df["social_platform_preference"],
+        normalize=False  # absolute counts
+    )
+
+    #  Plot
+    fig, ax = plt.subplots(figsize=(8, 4))
+    sns.heatmap(
+        ctab,               # data
+        cmap="Blues",       # colour scheme
+        annot=True,         # write counts in each cell
+        fmt="d",            # integer annotation format
+        linewidths=.5,
+        cbar_kws={"label": "Count"},
+        ax=ax
+    )
+    ax.set_xlabel("Preferred Social Platform")
+    ax.set_ylabel("Job Type")
+    ax.set_title("Social‑Platform Preference vs. Job Type")
+
+    #   Show in Streamlit and hand back the figure
+    st.pyplot(fig, clear_figure=False)
+    return fig
+
 
 os.chdir('..')
 
@@ -16,140 +48,234 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded")
 
-alt.themes.enable("dark")
-
-# heatmap function 
-def make_heatmap(input_df, input_y, input_x, input_color, input_color_theme):
-    heatmap = alt.Chart(input_df).mark_rect().encode(
-            y=alt.Y(f'{input_y}:O', axis=alt.Axis(title="Year", titleFontSize=18, titlePadding=15, titleFontWeight=900, labelAngle=0)),
-            x=alt.X(f'{input_x}:O', axis=alt.Axis(title="", titleFontSize=18, titlePadding=15, titleFontWeight=900)),
-            color=alt.Color(f'max({input_color}):Q',
-                             legend=None,
-                             scale=alt.Scale(scheme=input_color_theme)),
-            stroke=alt.value('black'),
-            strokeWidth=alt.value(0.25),
-        ).properties(width=900
-        ).configure_axis(
-        labelFontSize=12,
-        titleFontSize=12
-        ) 
-    return heatmap
-
-# donut 
-
-def make_donut(input_response, input_text, input_color):
-  if input_color == 'blue':
-      chart_color = ['#29b5e8', '#155F7A']
-  if input_color == 'green':
-      chart_color = ['#27AE60', '#12783D']
-
-    
-  source = pd.DataFrame({
-      "Topic": ['', input_text],
-      "% value": [100-input_response, input_response]
-  })
-  source_bg = pd.DataFrame({
-      "Topic": ['', input_text],
-      "% value": [100, 0]
-  })
-    
-  plot = alt.Chart(source).mark_arc(innerRadius=45, cornerRadius=25).encode(
-      theta="% value",
-      color= alt.Color("Topic:N",
-                      scale=alt.Scale(
-                          #domain=['A', 'B'],
-                          domain=[input_text, ''],
-                          # range=['#29b5e8', '#155F7A']),  # 31333F
-                          range=chart_color),
-                      legend=None),
-  ).properties(width=130, height=130)
-    
-  text = plot.mark_text(align='center', color="#29b5e8", font="Lato", fontSize=32, fontWeight=700, fontStyle="italic").encode(text=alt.value(f'{input_response} %'))
-  plot_bg = alt.Chart(source_bg).mark_arc(innerRadius=45, cornerRadius=20).encode(
-      theta="% value",
-      color= alt.Color("Topic:N",
-                      scale=alt.Scale(
-                          # domain=['A', 'B'],
-                          domain=[input_text, ''],
-                          range=chart_color),  # 31333F
-                      legend=None),
-  ).properties(width=130, height=130)
-  return plot_bg + plot + text
 
 
-def format_number(num):
-    if num > 1000000:
-        if not num % 1000000:
-            return f'{num // 1000000} M'
-        return f'{round(num / 1000000, 1)} M'
-    return f'{num // 1000} K'
+# Side bar 
 
+with st.sidebar:
+    st.title('Social Media Usage Vs Productivity Dashboard')
 
-def make_social_media_usage_over_demograpic(data: pd.DataFrame) -> None:
-    st.title("Social-media influence by demographic")
+    job_sel  = st.sidebar.multiselect('Job type', df['job_type'].unique())
+    gender_sel = st.sidebar.multiselect('Gender', df['gender'].unique())
 
-    # ---  Sidebar selectors  ----------------------------------------------
-    st.sidebar.header("Filter demographics")
-    age_sel   = st.sidebar.selectbox("Age group",   sorted(data["age"].unique()))
-    gender_sel = st.sidebar.selectbox("Gender",      sorted(data["gender"].unique()))
-    work_sel  = st.sidebar.selectbox("Work group",  sorted(data["job_type"].unique()))
-
-    # ---  Filter the dataset  ----------------------------------------------
-    mask = (
-        (data["age"]  == age_sel) &
-        (data["gender"]     == gender_sel) &
-        (data["job_type"] == work_sel)
-    )
-    subset = data.loc[mask]
-
-    # ---  Inform if no data  -----------------------------------------------
-    if subset.empty:
-        st.warning("No records match this demographic slice.")
-        st.stop()
-
-    # ---  Draw chart  -------------------------------------------------------
-    chart = (
-        alt.Chart(subset)
-           .mark_bar(size=35)
-           .encode(
-               x=alt.X("social_platform_preference", title="Platform"),
-               y=alt.Y("actual_productivity_score", title="Influence score"),
-               tooltip=["social_platform_preference", "actual_productivity_score"]
-           )
-           .properties(width="container", height=400)
-    )
-    st.altair_chart(chart, use_container_width=True)
-
-
-
-# make_social_media_usage_over_demograpic(data=df)
-
-
-
-# --- Sidebar filters
-job_sel  = st.sidebar.multiselect('Job type', df['job_type'].unique())
-gender_sel = st.sidebar.multiselect('Gender', df['gender'].unique())
-age_bins = [0,25,35,45,55,150]; labels = ['<25','25-34','35-44','45-54','55+']
-df['age_group'] = pd.cut(df['age'], bins=age_bins, labels=labels, right=False)
-
-# --- Apply filters
+# # --- Apply filters
 mask = (
     df['job_type'].isin(job_sel) & 
     df['gender'].isin(gender_sel) )
 filtered = df.loc[mask] if job_sel or gender_sel else df
 
-# --- KPI cards
-col1,col2,col3 = st.columns(3)
-col1.metric('Avg SMU time (h)', filtered['daily_social_media_time'].mean().round(1))
-col2.metric('Perceived prod.', filtered['perceived_productivity_score'].mean().round(1))
-col3.metric('Actual prod.', filtered['actual_productivity_score'].mean().round(1))
+# Visualization functions 
 
-# --- Scatter
-fig_scatter = px.scatter(filtered, x='daily_social_media_time', y='actual_productivity_score',
-                         color='gender', symbol='job_type', facet_row='age_group',
-                         trendline='ols', hover_data=['stress_level','sleep_hours'])
-st.plotly_chart(fig_scatter, use_container_width=True)
-# repeat similarly for heatmap, box/violin and bar …
+def show_gender_pie(
+    data: pd.DataFrame,
+    gender_col: str = "gender",
+    title: str = "Gender distribution"
+):
+ 
+    if gender_col not in data.columns:
+        st.error(f"'{gender_col}' not found in the DataFrame.")
+        return None
+
+    # Count each label
+    counts = data[gender_col].value_counts(dropna=False).reset_index()
+    counts.columns = [gender_col, "count"]
+
+    # Build the pie chart
+    fig = px.pie(
+        counts,
+        names=gender_col,
+        values="count",
+        title=title,
+        hole=0.3,   
+            
+    )
+    fig.update_traces(textinfo="percent+label")  # show % and label
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    return fig
+
+# stacked column chart 
+
+def show_focus_vs_wellbeing_bars(
+    df: pd.DataFrame,
+    focus_col: str = "uses_focus_apps",
+    wellbeing_col: str = "has_digital_wellbeing_enabled",
+    percent: bool = False
+):
+    counts = (
+        df
+        .groupby([focus_col, wellbeing_col], observed=False)
+        .size()
+        .reset_index(name="count")
+    )
+    fig = px.bar(
+        counts, x=focus_col, y="count", color=wellbeing_col,
+        barmode="stack" if not percent else "group",
+        text_auto=True,
+        labels={focus_col: "Uses Focus Apps", wellbeing_col: "Digital wellbeing"},
+        title="Focus‑app use vs. Digital‑wellbeing status",
+        height= 300
+    )
+    if percent:
+        fig.update_layout(barmode="stack")
+        fig.update_traces(offsetgroup=0)
+        # Convert to 100 %: normalise counts within each bar
+        fig.update_traces(
+            y=[c / counts[counts[focus_col] == x]["count"].sum()
+               for x, c in zip(counts[focus_col], counts["count"])])
+        fig.update_yaxes(tickformat=".0%")
+    st.plotly_chart(fig, use_container_width=True)
+
+# heat map 
 
 
-# make_heatmap(input_df=df , input_y='job_type', input_x='social_platform_preference',input_color='blues' ,input_color_theme = 'blues')
+import streamlit as st
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+def plot_social_vs_job_heatmap(df: pd.DataFrame):
+    """
+    Display (and return) a transparent‑background heat‑map that shows the
+    relationship between social_platform_preference and job_type.
+    """
+    # Build the frequency table
+    ctab = pd.crosstab(
+        df["job_type"],
+        df["social_platform_preference"],
+        normalize=False
+    )
+
+    # Create a *transparent* figure & axes
+    fig, ax = plt.subplots(figsize=(8, 4), facecolor="none")  # fig bg ⬝ transparent
+    ax.set_facecolor("none")                                  # axes bg ⬝ transparent
+
+    # Draw the heat‑map
+    sns.heatmap(
+        ctab,
+        cmap="Blues",
+        annot=True,
+        fmt="d",
+        linewidths=.5,
+        annot_kws={"color": "white"},   # <-- annotation text
+        cbar_kws={"label": "Count"},
+        ax=ax
+    )
+
+    # -------- make everything else white --------
+    ax.tick_params(colors="white")                 # tick labels
+    ax.xaxis.label.set_color("white")              # x‑axis title
+    ax.yaxis.label.set_color("white")              # y‑axis title
+    ax.title.set_color("white")                    # main title
+
+    cbar = ax.collections[0].colorbar             # grab the color‑bar
+    cbar.ax.yaxis.label.set_color("white")         # its title
+    plt.setp(cbar.ax.get_yticklabels(), color="white")  # its tick labels
+
+
+    # Optional: hide spines for a cleaner look
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+
+    # Render in Streamlit
+    st.pyplot(fig, clear_figure=False)      # Streamlit respects the transparency
+    return fig
+
+
+# clustered chart
+
+
+def plot_work_vs_social_by_job(df: pd.DataFrame):
+
+    # --- 1) summarise -------------------------------
+    agg = (
+        df.groupby("job_type", as_index=False)
+          .agg(
+              avg_work_hours=("work_hours_per_day", "mean"),
+              avg_social_time=("daily_social_media_time", "mean")
+          )
+          .melt(
+              id_vars="job_type",
+              var_name="metric",
+              value_name="hours"
+          )
+    )
+
+    # --- 2) build grouped‑bar chart -----------------
+    chart = (
+        alt.Chart(agg, height=400)
+        .mark_bar()
+        .encode(
+            x=alt.X("job_type:N", title="Job Type"),
+            xOffset="metric:N",                       # <-- groups the bars
+            y=alt.Y("hours:Q", title="Average hours / day"),
+            color=alt.Color(
+                "metric:N",
+                scale=alt.Scale(
+                    domain=["avg_work_hours", "avg_social_time"],
+                    range=["#1f77b4", "#ff7f0e"]
+                ),
+                legend=alt.Legend(title="Metric")
+            ),
+            tooltip=[
+                alt.Tooltip("job_type:N", title="Job type"),
+                alt.Tooltip("metric:N",    title="Metric"),
+                alt.Tooltip("hours:Q",     title="Hours", format=".2f")
+            ]
+        )
+        .properties(
+            width=alt.Step(40),                       # bar width
+            title="Work‑hours vs. Social‑media time by Job Type"
+        )
+    )
+
+    # --- 3) render & return --------------------------
+    st.altair_chart(chart, use_container_width=True)   # Streamlit API :contentReference[oaicite:1]{index=1}
+    return chart
+
+
+st.markdown(
+    """
+    <style>
+      .card {border-radius:0.6rem;padding:1rem;text-align:center;color:#fff;}
+      .blue  {background:#1f77b4;}
+      .green {background:#2ca02c;}
+      .purple   {background:#A020F0;}
+
+      .card .stMetric {margin-bottom:0.2rem;}
+      .card .stMetric > div > div {font-size:0.9rem;}      /* label */
+      .card .stMetric > div span {font-size:1.2rem;}       /* value */
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+# App Layout 
+with st.container():
+        col1, col2, col3 = st.columns(3, gap="medium")
+
+        with col1:
+            st.markdown('<div class="card blue">', unsafe_allow_html=True)
+            st.metric('Avg SMU time (h)', filtered['daily_social_media_time'].mean().round(1))
+
+        with col2:
+            st.markdown('<div class="card green">', unsafe_allow_html=True)
+            st.metric('Perceived prod.', filtered['perceived_productivity_score'].mean().round(1))
+
+
+        with col3:
+            st.markdown('<div class="card purple">', unsafe_allow_html=True)
+            st.metric('Actual prod.', filtered['actual_productivity_score'].mean().round(1))
+            
+            st.markdown("</div>", unsafe_allow_html=True)
+
+st.markdown("---")
+colA, colB, colC = st.columns((2,4,3), gap="medium")
+
+with colA:
+    show_gender_pie(df)
+    show_focus_vs_wellbeing_bars(df=df)
+
+with colB:
+    plot_social_vs_job_heatmap(df=df)
+    plot_work_vs_social_by_job(df=df)
