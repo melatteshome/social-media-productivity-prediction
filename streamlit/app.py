@@ -37,9 +37,9 @@ def plot_social_vs_job_heatmap(df: pd.DataFrame):
     return fig
 
 
-os.chdir('..')
+# os.chdir('..')
 
-data = pd.read_csv('streamlit/data/cleaned_data.csv')
+data = pd.read_csv('cleaned_data.csv')
 df = pd.DataFrame(data=data)
 # page configuration
 st.set_page_config(
