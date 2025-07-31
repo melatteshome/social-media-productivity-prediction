@@ -62,10 +62,15 @@ with st.sidebar:
     gender_sel = st.sidebar.multiselect('Gender', df['gender'].unique())
 
 # # --- Apply filters
-mask = (
-    df['job_type'].isin(job_sel) & 
-    df['gender'].isin(gender_sel) )
-filtered = df.loc[mask] if job_sel or gender_sel else df
+mask = pd.Series(True, index=df.index)          # start with “all rows allowed”
+
+if job_sel:                                     # apply *only* if something chosen
+    mask &= df['job_type'].isin(job_sel)
+
+if gender_sel:
+    mask &= df['gender'].isin(gender_sel)
+
+filtered = df[mask]
 
 # Visualization functions 
 
@@ -133,10 +138,7 @@ def show_focus_vs_wellbeing_bars(
 # heat map 
 
 
-import streamlit as st
-import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
+
 
 def plot_social_vs_job_heatmap(df: pd.DataFrame):
     """
@@ -259,21 +261,22 @@ with st.container():
 
         with col1:
             st.markdown('<div class="card blue">', unsafe_allow_html=True)
-            st.metric('Avg SMU time (h)', filtered['daily_social_media_time'].mean().round(1))
+            avg_smu_hours = round(filtered['daily_social_media_time'].mean(),2 )
+            st.metric('Avg SMU time (h)', avg_smu_hours)
 
         with col2:
             st.markdown('<div class="card green">', unsafe_allow_html=True)
-            st.metric('Perceived prod.', filtered['perceived_productivity_score'].mean().round(1))
+            st.metric('Perceived prod.', filtered['perceived_productivity_score'].mean().round(2))
 
 
         with col3:
             st.markdown('<div class="card purple">', unsafe_allow_html=True)
-            st.metric('Actual prod.', filtered['actual_productivity_score'].mean().round(1))
+            st.metric('Actual prod.', filtered['actual_productivity_score'].mean().round(2))
             
             st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown("---")
-colA, colB, colC = st.columns((2,4,3), gap="medium")
+colA, colB = st.columns((3,4), gap="medium")
 
 with colA:
     show_gender_pie(df)
