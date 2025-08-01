@@ -26,3 +26,27 @@ python3 -m venv your_env_name
 ```
 pip install -r requirements.txt
 ```
+
+## Data Source
+
+The Project relays on the data from the following source.
+
+https://www.kaggle.com/datasets/mahdimashayekhi/social-media-vs-productivity
+## Dashboard 
+
+The dashboard is build utilzing streamlit. The streamlit app is deployed using the free streamlit cloud. Please click on the link and explore. 
+
+https://social-media-appuctivity-prediction-app.streamlit.app/
+## Contributions
+
+Contributions are always welcome!
+
+See `contributing.md` for ways to get started.
+
+Please adhere to this project's `code of conduct`.
+
+
+## License
+
+[MIT](https://choosealicense.com/licenses/mit/)
+
